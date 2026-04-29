@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Laporan Otomatis</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      display: flex;
+      background: #f3f4f6;
+    }
+
+    .sidebar {
+      width: 270px;
+      background: #0f172a;
+      color: white;
+      min-height: 100vh;
+      padding: 20px;
+      flex-shrink: 0;
+    }
+
+    .sidebar h2 {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    .sidebar button, .sidebar select {
+      width: 100%;
+      padding: 12px;
+      margin: 5px 0;
+      border: none;
+      border-radius: 10px;
+      background: #1e293b;
+      color: white;
+      cursor: pointer;
+      font-size: 15px;
+    }
+
+    .sidebar button:hover { background: #334155; }
+
+    .content { flex: 1; padding: 20px; }
+
+    .page { display: none; }
+    .active { display: block; }
+
+    .card {
+      background: white;
+      padding: 15px;
+      border-radius: 14px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    input, select {
+      width: 100%;
+      padding: 14px;
+      margin: 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      font-size: 18px;
+    }
+
+    .submit {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 8px;
+      font-size: 18px;
+    }
+
+    .danger { background: #dc2626 !important; }
+    .info   { background: #0ea5e9 !important; }
+
+    .edit {
+      background: orange; color: white; border: none;
+      padding: 4px 8px; margin-left: 5px; border-radius: 6px; cursor: pointer;
+    }
+
+    .hapus {
+      background: red; color: white; border: none;
+      padding: 4px 8px; margin-left: 5px; border-radius: 6px; cursor: pointer;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 15px;
+    }
+
+    ul { padding-left: 20px; }
+    li { margin-bottom: 8px; }
+
+    #syncBadge {
+      display: block;
+      text-align: center;
+      font-size: 12px;
+      font-weight: bold;
+      padding: 5px 10px;
+      border-radius: 20px;
+      margin-bottom: 10px;
+    }
+    .sync-ok      { background: #22c55e; color: white; }
+    .sync-saving  { background: #f59e0b; color: white; }
+    .sync-error   { background: #ef4444; color: white; }
+
+    @media(max-width: 768px) {
+      body { flex-direction: column; }
+      .sidebar { width: 100%; min-height: auto; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="sidebar">
+  <h2>Laporan</h2>
+  <span id="syncBadge" class="sync-ok">✅ Terhubung</span>
+
+  <select id="globalShift" onchange="changeShift()">
+    <option value="shift1">Shift 1</option>
+    <option value="shift2">Shift 2</option>
+  </select>
+
+  <select id="inputMode">
+    <option value="normal">Input Normal</option>
+    <option value="cepat">Input Cepat</option>
+  </select>
+
+  <button onclick="showPage('home')">🏠 Home</button>
+  <button onclick="showPage('quantity')">📦 Total Quantity</button>
+  <button onclick="showPage('data')">📱 Penjualan Data</button>
+  <button onclick="showPage('acc')">💳 Penjualan ACC</button>
+  <button onclick="showPage('transfer')">🔁 Lap Transfer</button>
+  <button onclick="showPage('tartun')">💵 Lap Tarik Tunai</button>
+  <button onclick="showPage('pengeluaran')">🧾 Lap Pengeluaran</button>
+  <button onclick="showPage('telegram')">✈️ Lap Telegram</button>
+
+  <button class="danger" onclick="resetDB()">🗑 Hapus DB Shift Ini</button>
+  <button class="info" onclick="manualRefresh()">🔄 Refresh Data</button>
+</div>
+
+<div class="content">
+
+  <div id="home" class="page active">
+    <h1>Dashboard Laporan</h1>
+    <h2 id="shiftTitle"></h2>
+    <div class="grid" id="dashboard"></div>
+  </div>
+
+  <div id="quantity" class="page">
+    <h1>Total Quantity Shift</h1>
+    <div class="grid" id="quantityDashboard"></div>
+  </div>
+
+  <div id="data" class="page">
+    <div class="card">
+      <h2>Penjualan Data</h2>
+      <input type="tel" inputmode="numeric" pattern="[0-9.,]*" id="dataNominal"
+        placeholder="Masukkan nominal" onkeydown="handleEnter(event, saveData)">
+      <button class="submit" onclick="saveData()">Simpan</button>
+      <ul id="dataList"></ul>
+    </div>
+  </div>
+
+  <div id="acc" class="page">
+    <div class="card">
+      <h2>Penjualan ACC</h2>
+      <input type="tel" inputmode="numeric" pattern="[0-9.,]*" id="accNominal"
+        placeholder="Masukkan nominal" onkeydown="handleEnter(event, saveAcc)">
+      <button class="submit" onclick="saveAcc()">Simpan</button>
+      <ul id="accList"></ul>
+    </div>
+  </div>
+
+  <div id="transfer" class="page">
+    <div class="card">
+      <h2>Lap Transfer</h2>
+      <input type="tel" inputmode="numeric" pattern="[0-9.,]*" id="transferNominal"
+        placeholder="Masukkan nominal" onkeydown="handleEnter(event, saveTransfer)">
+      <button class="submit" onclick="saveTransfer()">Simpan</button>
+      <ul id="transferList"></ul>
+    </div>
+  </div>
+
+  <div id="tartun" class="page">
+    <div class="card">
+      <h2>Lap Tarik Tunai</h2>
+      <select id="tartunMode">
+        <option value="normal">Normal</option>
+        <option value="switch">Switch</option>
+      </select>
+      <input type="tel" inputmode="numeric" pattern="[0-9.,]*" id="tartunNominal"
+        placeholder="Masukkan nominal" onkeydown="handleEnter(event, saveTartun)">
+      <button class="submit" onclick="saveTartun()">Simpan</button>
+      <ul id="tartunList"></ul>
+    </div>
+  </div>
+
+  <div id="pengeluaran" class="page">
+    <div class="card">
+      <h2>Lap Pengeluaran</h2>
+      <input type="tel" inputmode="numeric" pattern="[0-9.,]*" id="pengeluaranNominal"
+        placeholder="Masukkan nominal" onkeydown="handleEnter(event, savePengeluaran)">
+      <button class="submit" onclick="savePengeluaran()">Simpan</button>
+      <ul id="pengeluaranList"></ul>
+    </div>
+  </div>
+
+  <div id="telegram" class="page">
+    <div class="card">
+      <h2>Lap Telegram</h2>
+      <input type="tel" inputmode="numeric" pattern="[0-9.,]*" id="telegramNominal"
+        placeholder="Masukkan total telegram">
+      <input type="tel" inputmode="numeric" pattern="[0-9]*" id="telegramQty"
+        placeholder="Masukkan quantity / trx telegram"
+        onkeydown="handleEnter(event, saveTelegram)">
+      <button class="submit" onclick="saveTelegram()">Simpan / Update</button>
+      <button class="submit danger" onclick="resetTelegram()">Hapus Telegram</button>
+      <ul id="telegramList"></ul>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ── STATE ──────────────────────────────────────────────────────────────────
+  let currentShift = localStorage.getItem("currentShift") || "shift1";
+  document.getElementById("globalShift").value = currentShift;
+
+  let cachedDB = {};  // { shift1: {...}, shift2: {...} }
+
+  // ── SYNC BADGE ─────────────────────────────────────────────────────────────
+  function setSyncStatus(state) {
+    const el = document.getElementById("syncBadge");
+    const map = {
+      ok:     ["sync-ok",     "✅ Tersinkronisasi"],
+      saving: ["sync-saving", "💾 Menyimpan..."],
+      error:  ["sync-error",  "❌ Gagal Simpan"]
+    };
+    el.className = map[state][0];
+    el.textContent = map[state][1];
+  }
+
+  // ── API HELPERS ────────────────────────────────────────────────────────────
+  async function apiGet(shift) {
+    const res = await fetch(`/api/db/${shift}`);
+    if (!res.ok) throw new Error("GET gagal");
+    return res.json();
+  }
+
+  async function apiPost(shift, data) {
+    const res = await fetch(`/api/db/${shift}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error("POST gagal");
+    return res.json();
+  }
+
+  async function apiDelete(shift) {
+    const res = await fetch(`/api/db/${shift}`, { method: "DELETE" });
+    if (!res.ok) throw new Error("DELETE gagal");
+    return res.json();
+  }
+
+  // ── DB HELPERS ─────────────────────────────────────────────────────────────
+  function getDefaultDB() {
+    return { data:[], acc:[], transfer:[], tartun:[], pengeluaran:[], telegram:{nominal:0,qty:0} };
+  }
+
+  async function getDB(shift) {
+    shift = shift || currentShift;
+    if (!cachedDB[shift]) {
+      cachedDB[shift] = await apiGet(shift);
+    }
+    return cachedDB[shift];
+  }
+
+  async function saveDB(db, shift) {
+    shift = shift || currentShift;
+    setSyncStatus("saving");
+    try {
+      await apiPost(shift, db);
+      cachedDB[shift] = db;
+      setSyncStatus("ok");
+    } catch(e) {
+      setSyncStatus("error");
+      console.error(e);
+    }
+    await renderAll();
+  }
+
+  // ── UTILITIES ──────────────────────────────────────────────────────────────
+  function handleEnter(event, callback) {
+    if (event.key === "Enter") { event.preventDefault(); callback(); }
+  }
+
+  function showPage(page) {
+    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+    document.getElementById(page).classList.add("active");
+  }
+
+  async function changeShift() {
+    currentShift = document.getElementById("globalShift").value;
+    localStorage.setItem("currentShift", currentShift);
+    await renderAll();
+  }
+
+  async function resetDB() {
+    if (confirm("Hapus semua data shift ini? (Semua user terpengaruh)")) {
+      setSyncStatus("saving");
+      try {
+        await apiDelete(currentShift);
+        cachedDB[currentShift] = getDefaultDB();
+        setSyncStatus("ok");
+      } catch(e) {
+        setSyncStatus("error");
+      }
+      await renderAll();
+    }
+  }
+
+  async function manualRefresh() {
+    cachedDB = {};  // bersihkan cache agar tarik ulang dari server
+    await renderAll();
+  }
+
+  function parseNominal(value) {
+    let mode = document.getElementById("inputMode").value;
+    if (!value) return 0;
+    value = value.toString().replace(/,/g, ".").trim();
+    if (mode === "normal") return parseInt(value.replace(/\./g, "")) || 0;
+    if (mode === "cepat") {
+      if (value.includes(".")) {
+        let [depan, belakang=""] = value.split(".");
+        if (belakang.length === 1) return parseInt(depan + belakang + "00");
+        if (belakang.length === 2) return parseInt(depan + belakang + "0");
+        if (belakang.length === 3) return parseInt(depan + belakang);
+        if (belakang.length >= 4) return parseInt(depan + belakang + "000");
+      }
+      return parseInt(value) * 1000;
+    }
+    return 0;
+  }
+
+  function sum(arr) { return arr.reduce((a,b)=>a+b,0); }
+  function fmt(n) { return "Rp " + Number(n).toLocaleString("id-ID"); }
+
+  // ── SAVE ACTIONS ───────────────────────────────────────────────────────────
+  async function saveData() {
+    let db = await getDB();
+    let nominal = parseNominal(document.getElementById("dataNominal").value);
+    if (nominal > 0) { db.data.push(nominal); document.getElementById("dataNominal").value = ""; await saveDB(db); }
+  }
+
+  async function saveAcc() {
+    let db = await getDB();
+    let nominal = parseNominal(document.getElementById("accNominal").value);
+    if (nominal > 0) { db.acc.push(nominal); document.getElementById("accNominal").value = ""; await saveDB(db); }
+  }
+
+  async function saveTransfer() {
+    let db = await getDB();
+    let nominal = parseNominal(document.getElementById("transferNominal").value);
+    if (nominal > 0) { db.transfer.push(nominal); document.getElementById("transferNominal").value = ""; await saveDB(db); }
+  }
+
+  function getTartunAdmin(mode, nominal) {
+    if (mode === "normal") {
+      if (nominal >= 10000 && nominal <= 299000)   return 3000;
+      if (nominal >= 300000 && nominal <= 499000)  return 5000;
+      if (nominal >= 500000 && nominal <= 999000)  return 7500;
+      if (nominal >= 1000000 && nominal <= 2000000) return 10000;
+    }
+    if (mode === "switch") {
+      if (nominal >= 10000 && nominal <= 299000)   return 5000;
+      if (nominal >= 300000 && nominal <= 499000)  return 10000;
+      if (nominal >= 500000 && nominal <= 999000)  return 17500;
+      if (nominal >= 1000000 && nominal <= 2000000) return 32500;
+    }
+    return 0;
+  }
+
+  async function saveTartun() {
+    let db = await getDB();
+    let nominal = parseNominal(document.getElementById("tartunNominal").value);
+    let mode = document.getElementById("tartunMode").value;
+    if (nominal < 10000 || nominal > 2000000) { alert("Nominal tarik tunai minimal 10.000 dan maksimal 2.000.000"); return; }
+    let admin = getTartunAdmin(mode, nominal);
+    db.tartun.push({ tunai: nominal, saldo: nominal - admin, mode });
+    document.getElementById("tartunNominal").value = "";
+    await saveDB(db);
+  }
+
+  async function savePengeluaran() {
+    let db = await getDB();
+    let nominal = parseNominal(document.getElementById("pengeluaranNominal").value);
+    if (nominal > 0) { db.pengeluaran.push(nominal); document.getElementById("pengeluaranNominal").value = ""; await saveDB(db); }
+  }
+
+  async function saveTelegram() {
+    let db = await getDB();
+    let nominal = parseNominal(document.getElementById("telegramNominal").value);
+    let qty = +document.getElementById("telegramQty").value;
+    if (nominal >= 0 && qty >= 0) {
+      db.telegram = { nominal, qty };
+      document.getElementById("telegramNominal").value = "";
+      document.getElementById("telegramQty").value = "";
+      await saveDB(db);
+    }
+  }
+
+  async function resetTelegram() {
+    let db = await getDB();
+    if (confirm("Hapus data telegram shift ini?")) {
+      db.telegram = { nominal: 0, qty: 0 };
+      await saveDB(db);
+    }
+  }
+
+  async function deleteItem(type, index) {
+    let db = await getDB();
+    if (confirm("Hapus data ini?")) { db[type].splice(index, 1); await saveDB(db); }
+  }
+
+  async function editItem(type, index) {
+    let db = await getDB();
+    let newValue = prompt("Edit nominal:", db[type][index]);
+    if (newValue !== null) {
+      let nominal = parseNominal(newValue);
+      if (nominal >= 0) { db[type][index] = nominal; await saveDB(db); }
+    }
+  }
+
+  async function editTartun(index) {
+    let db = await getDB();
+    let item = db.tartun[index];
+    let newNominal = prompt("Edit nominal tartun:", item.tunai);
+    if (newNominal === null) return;
+    let nominal = parseNominal(newNominal);
+    if (nominal < 10000 || nominal > 2000000) { alert("Nominal tidak valid"); return; }
+    let admin = getTartunAdmin(item.mode, nominal);
+    db.tartun[index] = { tunai: nominal, saldo: nominal - admin, mode: item.mode };
+    await saveDB(db);
+  }
+
+  async function deleteTartun(index) {
+    let db = await getDB();
+    if (confirm("Hapus tartun ini?")) { db.tartun.splice(index, 1); await saveDB(db); }
+  }
+
+  // ── RENDER ─────────────────────────────────────────────────────────────────
+  function renderList(id, arr, type) {
+    document.getElementById(id).innerHTML = arr.map((item, index) => {
+      if (typeof item === "object") {
+        return `<li>
+          ${item.mode.toUpperCase()} | Tunai: ${fmt(item.tunai)} | Saldo: ${fmt(item.saldo)}
+          <button class="edit" onclick="editTartun(${index})">Edit</button>
+          <button class="hapus" onclick="deleteTartun(${index})">Hapus</button>
+        </li>`;
+      }
+      return `<li>
+        ${fmt(item)}
+        <button class="edit" onclick="editItem('${type}', ${index})">Edit</button>
+        <button class="hapus" onclick="deleteItem('${type}', ${index})">Hapus</button>
+      </li>`;
+    }).join("");
+  }
+
+  async function renderAll() {
+    // Selalu tarik fresh dari server saat render
+    try {
+      cachedDB[currentShift] = await apiGet(currentShift);
+      if (currentShift === "shift2") cachedDB["shift1"] = await apiGet("shift1");
+      setSyncStatus("ok");
+    } catch(e) {
+      setSyncStatus("error");
+    }
+
+    let db = cachedDB[currentShift] || getDefaultDB();
+    let totalData = sum(db.data);
+    let totalAcc  = sum(db.acc);
+    let totalTf   = sum(db.transfer);
+    let totalPengeluaran = sum(db.pengeluaran);
+
+    let telegramNominal = db.telegram.nominal;
+    let telegramQty     = db.telegram.qty;
+
+    if (currentShift === "shift2") {
+      let s1 = cachedDB["shift1"] || getDefaultDB();
+      telegramNominal = Math.max(0, db.telegram.nominal - s1.telegram.nominal);
+      telegramQty     = Math.max(0, db.telegram.qty     - s1.telegram.qty);
+    }
+
+    let totalTartun      = db.tartun.reduce((a,b) => a + b.tunai + b.saldo, 0);
+    let totalTarikNominal = db.tartun.reduce((a,b) => a + b.tunai, 0);
+    let total  = totalData + totalAcc + telegramNominal;
+    let setor  = total - totalTartun - totalPengeluaran;
+    let totalTrx = db.data.length + db.acc.length + telegramQty + db.transfer.length + db.tartun.length;
+
+    document.getElementById("shiftTitle").innerText =
+      `Laporan ${currentShift === "shift1" ? "Shift 1" : "Shift 2"}`;
+
+    document.getElementById("dashboard").innerHTML = `
+      <div class="card">Data: ${fmt(totalData)}</div>
+      <div class="card">ACC: ${fmt(totalAcc)}</div>
+      <div class="card">Telegram: ${fmt(telegramNominal)}</div>
+      <div class="card">TOTAL: ${fmt(total)}</div>
+      <div class="card">TARTUN: ${fmt(totalTartun)}</div>
+      <div class="card">Pengeluaran: ${fmt(totalPengeluaran)}</div>
+      <div class="card">SETOR: ${fmt(setor)}</div>
+      <div class="card">Total TRX: ${totalTrx}</div>
+    `;
+
+    document.getElementById("quantityDashboard").innerHTML = `
+      <div class="card">Data: ${fmt(totalData)} (${db.data.length})</div>
+      <div class="card">TF: ${fmt(totalTf)} (${db.transfer.length})</div>
+      <div class="card">Tarik: ${fmt(totalTarikNominal)} (${db.tartun.length})</div>
+      <div class="card">TOTAL Quantity: ${db.data.length + db.transfer.length + db.tartun.length}</div>
+    `;
+
+    renderList("dataList",       db.data,       "data");
+    renderList("accList",        db.acc,        "acc");
+    renderList("transferList",   db.transfer,   "transfer");
+    renderList("tartunList",     db.tartun,     "tartun");
+    renderList("pengeluaranList",db.pengeluaran,"pengeluaran");
+
+    document.getElementById("telegramList").innerHTML =
+      `<li>Total: ${fmt(telegramNominal)} | Qty: ${telegramQty}</li>`;
+  }
+
+  // ── INPUT FILTER ───────────────────────────────────────────────────────────
+  document.querySelectorAll('input[type="tel"]').forEach(input => {
+    input.addEventListener("input", function() {
+      this.value = this.value.replace(/[^0-9.,]/g, "");
+    });
+  });
+
+  document.getElementById("telegramNominal").addEventListener("keydown", function(e) {
+    if (e.key === "Enter") { e.preventDefault(); document.getElementById("telegramQty").focus(); }
+  });
+
+  // ── AUTO REFRESH setiap 15 detik ──────────────────────────────────────────
+  setInterval(() => { cachedDB = {}; renderAll(); }, 15000);
+
+  // ── INIT ───────────────────────────────────────────────────────────────────
+  renderAll();
+</script>
+
+</body>
+</html>
