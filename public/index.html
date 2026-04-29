@@ -130,7 +130,7 @@
 
   <select id="inputMode">
     <option value="normal">Input Normal</option>
-    <option value="cepat">Input Cepat</option>
+    <option value="cepat" selected>Input Cepat</option>
   </select>
 
   <button onclick="showPage('home')">🏠 Home</button>
@@ -333,8 +333,7 @@
     await renderAll();
   }
 
-  function parseNominal(value) {
-    let mode = document.getElementById("inputMode").value;
+  function parseNominalMode(value, mode) {
     if (!value) return 0;
     value = value.toString().replace(/,/g, ".").trim();
     if (mode === "normal") return parseInt(value.replace(/\./g, "")) || 0;
@@ -349,6 +348,10 @@
       return parseInt(value) * 1000;
     }
     return 0;
+  }
+
+  function parseNominal(value) {
+    return parseNominalMode(value, document.getElementById("inputMode").value);
   }
 
   function sum(arr) { return arr.reduce((a,b)=>a+b,0); }
@@ -408,7 +411,7 @@
 
   async function saveTelegram() {
     let db = await getDB();
-    let nominal = parseNominal(document.getElementById("telegramNominal").value);
+    let nominal = parseNominalMode(document.getElementById("telegramNominal").value, "normal");
     let qty = +document.getElementById("telegramQty").value;
     if (nominal >= 0 && qty >= 0) {
       db.telegram = { nominal, qty };
