@@ -121,7 +121,7 @@
 
 <div class="sidebar">
   <h2>Laporan</h2>
-  <span id="syncBadge" class="sync-ok">✅ Terhubung</span>
+  <span id="syncBadge" class="sync-ok">Terhubung</span>
 
   <select id="globalShift" onchange="changeShift()">
     <option value="shift1">Shift 1</option>
@@ -133,17 +133,17 @@
     <option value="cepat" selected>Input Cepat</option>
   </select>
 
-  <button onclick="showPage('home')">🏠 Home</button>
-  <button onclick="showPage('quantity')">📦 Total Quantity</button>
-  <button onclick="showPage('data')">📱 Penjualan Data</button>
-  <button onclick="showPage('acc')">💳 Penjualan ACC</button>
-  <button onclick="showPage('transfer')">🔁 Lap Transfer</button>
-  <button onclick="showPage('tartun')">💵 Lap Tarik Tunai</button>
-  <button onclick="showPage('pengeluaran')">🧾 Lap Pengeluaran</button>
-  <button onclick="showPage('telegram')">✈️ Lap Telegram</button>
+  <button onclick="showPage('home')">Home</button>
+  <button onclick="showPage('quantity')">Total Quantity</button>
+  <button onclick="showPage('data')">Penjualan Data</button>
+  <button onclick="showPage('acc')">Penjualan ACC</button>
+  <button onclick="showPage('transfer')">Lap Transfer</button>
+  <button onclick="showPage('tartun')">Lap Tarik Tunai</button>
+  <button onclick="showPage('pengeluaran')">Lap Pengeluaran</button>
+  <button onclick="showPage('telegram')">Lap Telegram</button>
 
-  <button class="danger" onclick="resetDB()">🗑 Hapus DB Shift Ini</button>
-  <button class="info" onclick="manualRefresh()">🔄 Refresh Data</button>
+  <button class="danger" onclick="resetDB()">Hapus DB Shift Ini</button>
+  <button class="info" onclick="manualRefresh()">Refresh Data</button>
 </div>
 
 <div class="content">
@@ -240,9 +240,9 @@
   function setSyncStatus(state) {
     const el = document.getElementById("syncBadge");
     const map = {
-      ok:     ["sync-ok",     "✅ Tersinkronisasi"],
-      saving: ["sync-saving", "💾 Menyimpan..."],
-      error:  ["sync-error",  "❌ Gagal Simpan"]
+      ok:     ["sync-ok",     "Tersinkronisasi"],
+      saving: ["sync-saving", "Menyimpan..."],
+      error:  ["sync-error",  "Gagal Simpan"]
     };
     el.className = map[state][0];
     el.textContent = map[state][1];
@@ -413,7 +413,7 @@
     let db = await getDB();
     let nominal = parseNominalMode(document.getElementById("telegramNominal").value, "normal");
     let qty = +document.getElementById("telegramQty").value;
-    if (nominal >= 0 && qty >= 0) {
+    if (nominal >= 1 && qty >= 0) {
       db.telegram = { nominal, qty };
       document.getElementById("telegramNominal").value = "";
       document.getElementById("telegramQty").value = "";
@@ -525,9 +525,9 @@
 
     document.getElementById("quantityDashboard").innerHTML = `
       <div class="card">Data: ${fmt(totalData)} (${db.data.length})</div>
+      <div class="card">ACC: ${fmt(totalAcc)} (${db.acc.length})</div>
       <div class="card">TF: ${fmt(totalTf)} (${db.transfer.length})</div>
       <div class="card">Tarik: ${fmt(totalTarikNominal)} (${db.tartun.length})</div>
-      <div class="card">TOTAL Quantity: ${db.data.length + db.transfer.length + db.tartun.length}</div>
     `;
 
     renderList("dataList",       db.data,       "data");
